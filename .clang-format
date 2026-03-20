@@ -1,0 +1,44 @@
+---
+Language: Cpp
+BasedOnStyle: LLVM
+
+# 1. Layout & Geometry
+ColumnLimit: 100
+IndentWidth: 4
+UseTab: Never
+Standard: c++17
+
+# 2. Braces & Alignment
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterClass: true
+  AfterControlStatement: Never
+  AfterEnum: true
+  AfterFunction: true
+  AfterNamespace: true
+  AfterStruct: true
+  AfterUnion: true
+  BeforeElse: false
+  SplitEmptyFunction: false
+
+# 3. Cleanliness & Organization
+SortIncludes: Never
+IncludeBlocks: Regroup
+IncludeCategories:
+  - Regex: '^<.*'
+    Priority: 1
+  - Regex: '.*'
+    Priority: 2
+
+# 4. Modern C++ Refinements
+FixNamespaceComments: true
+ReflowComments: true
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# 5. Space Handling
+SpaceAfterCStyleCast: true
+SpaceBeforeRangeBasedForLoopColon: true
+PointerAlignment: Left
+---

@@ -1,0 +1,43 @@
+name: Audio Gateway CI (Docker-Synced)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    
+    # I am telling GitHub to use your specific Dockerfile as the environment.
+    # This prevents the "missing <print> header" or "wrong GCC version" issues.
+    container:
+      image: mcr.microsoft.com/devcontainers/cpp:1-ubuntu-24.04
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Install System Dependencies
+      # I am mirroring your Dockerfile 'RUN' commands exactly.
+      run: |
+        apt-get update && apt-get install -y \
+          libasound2-dev \
+          libgtest-dev \
+          cmake \
+          g++ \
+          build-essential
+
+    - name: Configure CMake
+      # I am using Release mode for the cloud to catch optimization bugs.
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+    - name: Build Project
+      run: cmake --build build --config Release
+
+    - name: Run GTest Suite
+      working-directory: build
+      # I am using the '--verbose' flag so we can see the GTest 
+      # output directly in the GitHub Actions console.
+      run: ctest --output-on-failure

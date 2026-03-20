@@ -1,0 +1,31 @@
+{
+    "name": "Audio Gateway Dev Environment",
+    "build": {
+        "dockerfile": "Dockerfile"
+    },
+    // I am mounting the host's sound devices into the container.
+    // I am also enabling 'privileged' mode because high-performance audio 
+    // often requires access to the kernel's high-resolution timers.
+    "runArgs": [
+        "--device=/dev/snd:/dev/snd",
+        "--privileged"
+    ],
+    "customizations": {
+        "vscode": {
+            // I am pre-installing these extensions so the container 
+            // feels like a professional IDE the second it starts up.
+            "extensions": [
+                "ms-vscode.cpptools",
+                "ms-vscode.cmake-tools",
+                "xaver.clang-format",
+                "llvm-vs-code-extensions.vscode-clangd"
+            ],
+            "settings": {
+                "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
+                "C_Cpp.codeAnalysis.clangTidy.enabled": true
+            }
+        }
+    },
+    // I REMOVED THE "features" SECTION TO BYPASS THE CREDENTIAL ERROR
+    "remoteUser": "vscode"
+}
