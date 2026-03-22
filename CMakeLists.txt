@@ -1,59 +1,44 @@
 cmake_minimum_required(VERSION 3.24)
 
-# I am keeping the project name consistent for our future migration.
+# Project metadata
 project(AudioGateway VERSION 0.1.0 LANGUAGES CXX)
 
-# I am sticking with C++23. I want 'std::expected' and 'std::print' 
-# available from day one in the container.
+# Industrial C++23 standards
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# I am enabling the compile commands for Clang-Tidy support.
+# Export compile commands for Clang-Tidy/Cppcheck
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# I am searching for ALSA. In your Dev Container (Ubuntu 24.04), 
-# this will succeed once you've installed 'libasound2-dev'.
+# --- Dependencies ---
 find_package(ALSA REQUIRED)
-
-# I am searching for GoogleTest. 
-# I am choosing to make this REQUIRED because we cannot verify our 
-# hardware logic without our GTest suite.
 find_package(GTest REQUIRED)
 
-# I am creating one library that contains all our "to-be-utils" code 
-# and the hardware driver logic.
-add_library(gateway_lib STATIC)
+# --- Library Logic ---
+# I am creating a static library to house our hardware implementation.
+# This makes it easy to link against both the main app AND the tests.
+add_library(gateway_lib STATIC src/alsa_impl.cpp)
 
-# I am making the 'include' folder public for this project.
-# This ensures my main.cpp and my unit tests can see everything easily.
+# I am defining the 'include' directory as PUBLIC so that 
+# any target linking to this library automatically sees your headers.
 target_include_directories(gateway_lib PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
-# I am linking the ALSA kernel headers to the library.
+# Link ALSA to the library logic
 target_link_libraries(gateway_lib PRIVATE ALSA::ALSA)
 
-# I am adding our initial source files. 
-# I am including 'src/alsa_impl.cpp' so we can test the ALSA-wrapped logic.
-target_sources(gateway_lib PRIVATE 
-    src/alsa_impl.cpp
-)
-
-# I am creating the main hardware gateway executable.
+# --- Main Executable ---
 add_executable(${PROJECT_NAME} src/main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE gateway_lib)
 
-# --- GOOGLETEST UNIT TESTING ---
-# I am enabling CTest to allow for 'ctest' command execution.
+# --- Unit Testing (GTest) ---
 enable_testing()
 
-# I am creating the test executable. 
-# I am NOT adding a main file to the sources because I am linking gtest_main.
+# I am using GTest::gtest_main so we don't have to write a main() for tests.
 add_executable(unit_tests tests/unit/test_hardware.cpp)
 
-# I am linking the gateway logic, the core GTest library, 
-# and the gtest_main entry point.
 target_link_libraries(unit_tests 
     PRIVATE 
         gateway_lib 
@@ -61,34 +46,30 @@ target_link_libraries(unit_tests
         GTest::gtest_main
 )
 
-# I am using this helper function to automatically discover 
-# individual TEST() macros and list them in CTest.
+# Automated test discovery
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
 
-# --- 2. The Fuzz Target (LibFuzzer) ---
-# I wrap this in an OPTION so it doesn't slow down your local development.
+# --- Fuzz Testing (LibFuzzer) ---
+# I renamed this to match your 'fuzz_device.cpp' file.
 option(ENABLE_FUZZING "Build the Fuzzer targets" OFF)
 
 if(ENABLE_FUZZING)
-    # I am checking for Clang because GCC's libFuzzer support is 'messy'.
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        add_executable(fuzz_ring_buffer tests/fuzz/fuzz_ring_buffer.cpp)
+        # Updated source path to match your 'ls' output
+        add_executable(fuzz_device tests/fuzz/fuzz_device.cpp)
         
-        # I am linking to 'gateway_lib' which contains your RingBuffer.
-        target_link_libraries(fuzz_ring_buffer PRIVATE gateway_lib)
+        target_link_libraries(fuzz_device PRIVATE gateway_lib)
         
-        target_compile_options(fuzz_ring_buffer PRIVATE 
+        # AddressSanitizer + UndefinedBehaviorSanitizer are vital for fuzzing
+        target_compile_options(fuzz_device PRIVATE 
             -fsanitize=fuzzer,address,undefined)
-        target_link_options(fuzz_ring_buffer PRIVATE 
+        target_link_options(fuzz_device PRIVATE 
             -fsanitize=fuzzer,address,undefined)
     else()
-        message(FATAL_ERROR "Fuzzing requires Clang (clang++). Please set CMAKE_CXX_COMPILER.")
+        message(WARNING "Fuzzing skipped: Requires Clang. Current compiler: ${CMAKE_CXX_COMPILER_ID}")
     endif()
 endif()
-
-
-
 
 
 

@@ -1,20 +1,15 @@
 #include <gtest/gtest.h>
-#include "audio_hardware.h"
-#include <iostream>
+#include "audio_hardware.hpp"
 
-class MockAudioHardware : public AudioHardware {
-public:
-    std::expected<DeviceInfo, AudioError> probe_default_device() override {
-        return std::unexpected(AudioError::Busy);
-    }
-};
-
-TEST(AudioHardwareTest, HandlesBusyDeviceCorrectly) {
-    MockAudioHardware mock;
-    auto result = mock.probe_default_device();
-
-    ASSERT_FALSE(result.has_value());
-    EXPECT_EQ(result.error(), AudioError::Busy);
+TEST(HardwareTest, InitialStateIsClosed) {
+    AlsaHardware hw("default");
+    EXPECT_FALSE(hw.is_open());
 }
 
-// I removed the manual print here; GTest handles the output for us.
+TEST(HardwareTest, FailsOnInvalidDevice) {
+    // We expect this to fail gracefully without crashing
+    AlsaHardware hw("non_existent_device_12345");
+    auto res = hw.open_capture();
+    EXPECT_FALSE(res.has_value());
+    EXPECT_EQ(res.error(), AlsaError::OpenFailed);
+}

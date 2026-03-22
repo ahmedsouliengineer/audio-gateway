@@ -1,17 +1,15 @@
-#include "audio_hardware.h"
-#include <iostream> // Swapped from <print>
+#include "audio_hardware.hpp"
+#include <iostream>
 
 int main() {
-    AudioHardware hw;
-    auto result = hw.probe_default_device();
+    AlsaDevice mic("default");
+    auto result = mic.open_capture();
 
-    if (!result) {
-        // I am using standard output for now since GCC 13 hasn't 
-        // fully cooked the <print> header yet.
-        std::cerr << "Hardware Probe Failed: Error Code " << (int)result.error() << std::endl;
-        return 1;
+    if (result) {
+        std::cout << "ALSA Device opened successfully!" << std::endl;
+    } else {
+        std::cerr << "Failed to open ALSA device (Expected in CI/Docker without hardware access)." << std::endl;
     }
 
-    std::cout << "Successfully initialized: " << result->name << std::endl;
     return 0;
 }
