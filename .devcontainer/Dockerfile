@@ -2,6 +2,8 @@
 FROM mcr.microsoft.com/devcontainers/cpp:1-ubuntu-24.04 AS base
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
+    libc++-dev \
+    libc++abi-dev \
     libasound2-dev \
     libzmq3-dev \
     libboost-all-dev \
@@ -37,6 +39,8 @@ RUN --mount=type=cache,target=/root/.ccache \
     cmake -B build \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_CXX_COMPILER=clang++ \
+        -DCMAKE_CXX_FLAGS="-stdlib=libc++" \
+        -DCMAKE_EXE_LINKER_FLAGS="-stdlib=libc++" \
         -DENABLE_FUZZING=ON \
         -DCMAKE_CXX_COMPILER_LAUNCHER=ccache && \
     cmake --build build --config Release
