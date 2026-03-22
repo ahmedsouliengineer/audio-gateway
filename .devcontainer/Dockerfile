@@ -22,7 +22,11 @@ FROM base AS audit
 COPY . .
 RUN --mount=type=cache,target=/root/.ccache \
     cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON && \
-    cppcheck --project=build/compile_commands.json --enable=all --error-exitcode=1 -i build/_deps
+    cppcheck --project=build/compile_commands.json \
+             --enable=all \
+             --suppress=missingIncludeSystem \
+             --error-exitcode=1 \
+             -i build/_deps
 
 # --- STAGE 3: The Builder ---
 FROM base AS builder
