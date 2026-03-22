@@ -6,6 +6,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     libasound2-dev \
     libzmq3-dev \
     libboost-all-dev \
+    libgtest-dev \
     cmake \
     clang \
     ccache \
