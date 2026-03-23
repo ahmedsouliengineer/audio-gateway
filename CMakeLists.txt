@@ -9,31 +9,25 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # --- 1. FIND PACKAGES ---
+# I am requiring ALSA for audio and GoogleTest for validation.
 find_package(ALSA REQUIRED)
 find_package(GTest REQUIRED)
 find_package(PkgConfig REQUIRED)
 
-# --- 2. DEPENDENCY DETECTION (PkgConfig) ---
-# I am using PkgConfig for libzmq (Standard).
+# --- 2. ZEROMQ DETECTION (PkgConfig) ---
+# I am using PkgConfig for libzmq (Standard). 
+# I am choosing to leave out Boost here to establish a green baseline.
 pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
-
-# I am fetching the specific Boost modules. 
-# Ubuntu 24.04 provides 'boost_system' and 'boost_thread' pc files.
-# I am choosing this specific list because a generic 'boost' module doesn't exist.
-pkg_check_modules(BOOST_SYS REQUIRED IMPORTED_TARGET boost_system)
-pkg_check_modules(BOOST_THR REQUIRED IMPORTED_TARGET boost_thread)
 
 # --- 3. LIBRARY TARGET ---
 add_library(gateway_lib STATIC)
 target_include_directories(gateway_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# I am linking the targets provided by PkgConfig.
+# I am linking ONLY the hardware and verified network dependencies.
 target_link_libraries(gateway_lib 
     PRIVATE 
         ALSA::ALSA 
         PkgConfig::ZMQ
-        PkgConfig::BOOST_SYS
-        PkgConfig::BOOST_THR
 )
 target_sources(gateway_lib PRIVATE src/alsa_impl.cpp)
 
