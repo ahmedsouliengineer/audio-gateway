@@ -11,29 +11,28 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 # --- 1. FIND PACKAGES ---
 find_package(ALSA REQUIRED)
 find_package(GTest REQUIRED)
-
-# I am switching back to the standard Module mode but removing the 'CONFIG' 
-# requirement which was failing in CI. This lets CMake use its internal 
-# FindBoost.cmake script to locate the Ubuntu system libraries.
-find_package(Boost REQUIRED COMPONENTS system thread)
-
-# --- 2. ZEROMQ DETECTION (PkgConfig) ---
 find_package(PkgConfig REQUIRED)
+
+# --- 2. DEPENDENCY DETECTION (PkgConfig) ---
+# I am using PkgConfig for both ZeroMQ and Boost.
+# Ubuntu 24.04 has transitioned many libraries to 't64' versions; 
+# PkgConfig handles this mapping more reliably than standard find_package.
 pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
+
+# I am fetching the core Boost modules via PkgConfig. 
+# This bypasses the brittle 'FindBoost.cmake' script entirely.
+pkg_check_modules(BOOST REQUIRED IMPORTED_TARGET boost_system boost_thread)
 
 # --- 3. LIBRARY TARGET ---
 add_library(gateway_lib STATIC)
 target_include_directories(gateway_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# I am linking the hardware and network dependencies.
-# I am using Boost_LIBRARIES and Boost_INCLUDE_DIRS which are the 
-# standard variables populated by the FindBoost module.
+# I am linking using the specific Imported Targets created by PkgConfig.
 target_link_libraries(gateway_lib 
     PRIVATE 
         ALSA::ALSA 
         PkgConfig::ZMQ
-        Boost::system
-        Boost::thread
+        PkgConfig::BOOST
 )
 target_sources(gateway_lib PRIVATE src/alsa_impl.cpp)
 
