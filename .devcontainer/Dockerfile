@@ -18,3 +18,13 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 # I am adding the 'vscode' user to the 'audio' group to ensure 
 # my application can open /dev/snd without root permissions.
 RUN usermod -aG audio vscode
+
+# --- STAGE: Fuzzing Toolchain ---
+# I am isolating the Clang 18 installation. 
+# This confirms if Clang 18 is compatible with our Ubuntu 24.04 base.
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
+    && apt-get -y install --no-install-recommends \
+    clang-18 \
+    llvm-18 \
+    libfuzzer-18-dev \
+    && rm -rf /var/lib/apt/lists/*
