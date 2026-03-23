@@ -9,18 +9,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # --- 1. FIND PACKAGES ---
-# I am requiring ALSA for audio and GoogleTest for validation.
 find_package(ALSA REQUIRED)
 find_package(GTest REQUIRED)
 
-# I am using CONFIG mode for Boost 1.83.
-# I am choosing this to bypass the brittle 'FindBoost.cmake' script 
-# and use the official configuration files provided by Ubuntu 24.04.
-find_package(Boost 1.83 REQUIRED CONFIG COMPONENTS system thread)
+# I am switching back to the standard Module mode but removing the 'CONFIG' 
+# requirement which was failing in CI. This lets CMake use its internal 
+# FindBoost.cmake script to locate the Ubuntu system libraries.
+find_package(Boost REQUIRED COMPONENTS system thread)
 
 # --- 2. ZEROMQ DETECTION (PkgConfig) ---
-# I am using PkgConfig because libzmq3-dev on Ubuntu does not 
-# ship with a native CMake 'Config' file.
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
 
@@ -28,13 +25,14 @@ pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
 add_library(gateway_lib STATIC)
 target_include_directories(gateway_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# I am linking the hardware and network dependencies here.
-# I am using PkgConfig::ZMQ and the official Boost:: targets.
+# I am linking the hardware and network dependencies.
+# I am using Boost_LIBRARIES and Boost_INCLUDE_DIRS which are the 
+# standard variables populated by the FindBoost module.
 target_link_libraries(gateway_lib 
     PRIVATE 
         ALSA::ALSA 
         PkgConfig::ZMQ
-        Boost::system 
+        Boost::system
         Boost::thread
 )
 target_sources(gateway_lib PRIVATE src/alsa_impl.cpp)
@@ -45,7 +43,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE gateway_lib)
 
 # --- 5. GOOGLETEST UNIT TESTING ---
 enable_testing()
-# I am correcting the path to match your flat 'tests/' directory.
 add_executable(unit_tests tests/test_hardware.cpp)
 target_link_libraries(unit_tests PRIVATE gateway_lib GTest::gtest GTest::gtest_main)
 
@@ -57,7 +54,6 @@ option(ENABLE_FUZZING "Build the Fuzzer targets" OFF)
 
 if(ENABLE_FUZZING)
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        # I am correcting the path to match your flat 'tests/' directory.
         add_executable(fuzz_alsa tests/fuzz_alsa.cpp)
         target_link_libraries(fuzz_alsa PRIVATE gateway_lib)
         
