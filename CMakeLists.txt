@@ -8,49 +8,39 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# --- 1. FIND PACKAGES ---
-# I am requiring ALSA for audio and GoogleTest for validation.
 find_package(ALSA REQUIRED)
 find_package(GTest REQUIRED)
-find_package(PkgConfig REQUIRED)
 
-# --- 2. ZEROMQ DETECTION (PkgConfig) ---
-# I am using PkgConfig for libzmq (Standard). 
-# I am choosing to leave out Boost here to establish a green baseline.
-pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
-
-# --- 3. LIBRARY TARGET ---
 add_library(gateway_lib STATIC)
 target_include_directories(gateway_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-
-# I am linking ONLY the hardware and verified network dependencies.
-target_link_libraries(gateway_lib 
-    PRIVATE 
-        ALSA::ALSA 
-        PkgConfig::ZMQ
-)
+target_link_libraries(gateway_lib PRIVATE ALSA::ALSA)
 target_sources(gateway_lib PRIVATE src/alsa_impl.cpp)
 
-# --- 4. EXECUTABLE TARGET ---
 add_executable(${PROJECT_NAME} src/main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE gateway_lib)
 
-# --- 5. GOOGLETEST UNIT TESTING ---
+# --- GOOGLETEST UNIT TESTING ---
 enable_testing()
-add_executable(unit_tests tests/test_hardware.cpp)
+add_executable(unit_tests tests/unit/test_hardware.cpp)
 target_link_libraries(unit_tests PRIVATE gateway_lib GTest::gtest GTest::gtest_main)
 
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
 
-# --- 6. FUZZ TESTING (LibFuzzer) ---
+# --- 5. FUZZ TESTING (LibFuzzer) ---
+# I am adding an option to toggle fuzzing. It is OFF by default to 
+# avoid interfering with standard GCC builds.
 option(ENABLE_FUZZING "Build the Fuzzer targets" OFF)
 
 if(ENABLE_FUZZING)
+    # I am forcing a check for Clang. libFuzzer is tightly integrated with 
+    # the LLVM toolchain we installed in the Dockerfile.
     if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        add_executable(fuzz_alsa tests/fuzz_alsa.cpp)
+        add_executable(fuzz_alsa tests/fuzz/fuzz_alsa.cpp)
         target_link_libraries(fuzz_alsa PRIVATE gateway_lib)
         
+        # I am enabling AddressSanitizer and UndefinedBehaviorSanitizer.
+        # These are the "eyes" of the fuzzer that catch memory corruption.
         target_compile_options(fuzz_alsa PRIVATE 
             -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
         target_link_options(fuzz_alsa PRIVATE 
