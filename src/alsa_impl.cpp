@@ -1,14 +1,24 @@
 #include "audio_hardware.hpp"
+#include <iostream>
 
-std::expected<void, AlsaError> AlsaHardware::open_capture() {
-    if (handle_) return {}; 
+AlsaHardware::AlsaHardware(std::string device_name) 
+    : device_name_(std::move(device_name)) {}
 
-    int rc = snd_pcm_open(&handle_, name_.c_str(), SND_PCM_STREAM_CAPTURE, 0);
-    if (rc < 0) {
-        handle_ = nullptr;
-        return std::unexpected(AlsaError::OpenFailed);
+AlsaHardware::~AlsaHardware() {
+    close();
+}
+
+std::optional<AlsaError> AlsaHardware::initialize() {
+    // I am attempting to open the PCM device for capture.
+    int err = snd_pcm_open(&handle_, device_name_.c_str(), SND_PCM_STREAM_CAPTURE, 0);
+    
+    if (err < 0) {
+        std::cerr << "ALSA: Cannot open device " << device_name_ << " (" << snd_strerror(err) << ")\n";
+        return AlsaError::OpenFailed;
     }
-    return {};
+
+    // Success: Return nothing (nullopt)
+    return std::nullopt;
 }
 
 void AlsaHardware::close() {

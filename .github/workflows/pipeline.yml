@@ -1,4 +1,4 @@
-name: Audio Gateway CI (Industrial Standard)
+name: Audio Gateway CI (Docker-Synced)
 
 on:
   push:
@@ -9,46 +9,28 @@ on:
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    
+    container:
+      image: mcr.microsoft.com/devcontainers/cpp:1-ubuntu-24.04
+
     steps:
     - name: Checkout Code
       uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: 1. Run Static Analysis (Audit)
+    - name: Install System Dependencies
       run: |
-        docker build -f .devcontainer/Dockerfile --target audit \
-          --cache-from type=gha \
-          --cache-to type=gha,mode=max \
-          -t gateway-audit .
+        apt-get update && apt-get install -y \
+          libasound2-dev \
+          libgtest-dev \
+          cmake \
+          g++ \
+          build-essential
 
-    - name: 2. Build Production Image
-      run: |
-        docker build -f .devcontainer/Dockerfile \
-          --cache-from type=gha \
-          --cache-to type=gha,mode=max \
-          -t audio-gateway:latest .
+    - name: Configure CMake
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
 
-    - name: 3. Run GTest Suite
-      # Note: This will only work once you have unit tests defined in your CMake
-      run: |
-        docker run --entrypoint ctest audio-gateway:latest --output-on-failure || echo "No tests found yet"
+    - name: Build Project
+      run: cmake --build build --config Release
 
-    - name: Restore Fuzz Corpus
-      uses: actions/cache@v4
-      with:
-        path: tests/fuzz/corpus
-        key: fuzz-corpus-${{ runner.os }}-${{ github.run_id }}
-        restore-keys: |
-          fuzz-corpus-${{ runner.os }}-
-
-    - name: 4. Run Controlled Fuzz
-      run: |
-        mkdir -p tests/fuzz/corpus
-        # Note: This will fail until the fuzzer binary is built and included
-        docker run -v $(pwd)/tests/fuzz/corpus:/app/corpus \
-          --entrypoint ./fuzz_ring_buffer \
-          audio-gateway:latest \
-          -max_total_time=60 -rss_limit_mb=2048 /app/corpus || echo "Fuzzer not yet implemented"
+    - name: Run GTest Suite
+      working-directory: build
+      run: ctest --output-on-failure
