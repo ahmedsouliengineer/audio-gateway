@@ -17,12 +17,18 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install System Dependencies
+      # I am adding libzmq3-dev and libboost-all-dev here.
+      # Without these, PkgConfig in the next step will fail to find the .pc files.
       run: |
         apt-get update && apt-get install -y \
           libasound2-dev \
           libgtest-dev \
+          libzmq3-dev \
+          libboost-all-dev \
+          pkg-config \
           cmake \
           g++ \
+          clang-18 \
           build-essential
 
     - name: Configure CMake
@@ -36,12 +42,8 @@ jobs:
       run: ctest --output-on-failure
 
     - name: 4. Build and Run Fuzzer (LLVM 18)
-      # I am using a separate build directory 'build_fuzz' to ensure 
-      # the Clang-sanitized binaries don't mix with our production GCC ones.
-      # I am limiting the run to 60 seconds with a 2GB memory limit.
-      # This is enough time to catch immediate 'Use-After-Free' or 'Buffer-Overflow' bugs.
+      # I am using Clang-18 explicitly to match our Dockerfile toolchain.
       run: |
         cmake -B build_fuzz -DCMAKE_CXX_COMPILER=clang++-18 -DENABLE_FUZZING=ON
         cmake --build build_fuzz --target fuzz_alsa
-        
         ./build_fuzz/fuzz_alsa -max_total_time=60 -rss_limit_mb=2048

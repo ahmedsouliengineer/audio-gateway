@@ -15,13 +15,12 @@ find_package(PkgConfig REQUIRED)
 
 # --- 2. DEPENDENCY DETECTION (PkgConfig) ---
 # I am using PkgConfig for both ZeroMQ and Boost.
-# Ubuntu 24.04 has transitioned many libraries to 't64' versions; 
-# PkgConfig handles this mapping more reliably than standard find_package.
+# I am choosing PkgConfig because it is the most reliable way to handle 
+# the 't64' library transition in Ubuntu 24.04.
 pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
 
-# I am fetching the core Boost modules via PkgConfig. 
-# This bypasses the brittle 'FindBoost.cmake' script entirely.
-pkg_check_modules(BOOST REQUIRED IMPORTED_TARGET boost_system boost_thread)
+# I am fetching Boost via PkgConfig.
+pkg_check_modules(BOOST REQUIRED IMPORTED_TARGET boost)
 
 # --- 3. LIBRARY TARGET ---
 add_library(gateway_lib STATIC)
