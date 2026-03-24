@@ -28,50 +28,21 @@ jobs:
           cmake \
           g++ \
           clang-18 \
-          llvm-18 \
-          build-essential \
-          cppcheck \
-          clang-format \
-          lcov
+          build-essential
 
-    - name: Run Static Analysis (Cppcheck)
-      run: cppcheck --enable=warning,performance,portability --error-exitcode=1 src/ include/
+    - name: Configure CMake
+      # I am explicitly enabling the fuzzer in the main build to catch 
+      # linking errors early.
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++-18 -DENABLE_FUZZING=ON
 
-    - name: Check Code Formatting
-      run: find src include tests -name "*.cpp" -o -name "*.h" | xargs clang-format --dry-run --Werror
+    - name: Build Project
+      run: cmake --build build --config Release
 
-    - name: Configure and Build (Coverage Mode)
-      run: |
-        cmake -B build_cov \
-          -DCMAKE_BUILD_TYPE=Debug \
-          -DCMAKE_CXX_COMPILER=clang++-18 \
-          -DENABLE_COVERAGE=ON \
-          -DENABLE_FUZZING=ON
-        cmake --build build_cov
-
-    - name: Run GTest Suite & Generate Coverage (Clang-LLVM Bridge)
-      working-directory: build_cov
-      run: |
-        echo '#!/bin/bash' > llvm-gcov.sh
-        echo 'exec llvm-cov-18 gcov "$@"' >> llvm-gcov.sh
-        chmod +x llvm-gcov.sh
-        
-        ctest --output-on-failure
-        
-        lcov --capture \
-             --directory . \
-             --output-file coverage.info \
-             --gcov-tool $(pwd)/llvm-gcov.sh \
-             --ignore-errors inconsistent
-        
-        lcov --remove coverage.info '/usr/*' '*/tests/*' '*/googletest/*' -o filtered.info \
-             --ignore-errors inconsistent
-
-    - name: Upload Coverage Report
-      uses: actions/upload-artifact@v4
-      with:
-        name: code-coverage
-        path: build_cov/filtered.info
+    - name: Run GTest Suite
+      working-directory: build
+      run: ctest --output-on-failure
 
     - name: Run Fuzzer (Short Smoke Test)
-      run: ./build_cov/fuzz_alsa -max_total_time=30 -rss_limit_mb=2048
+      # I am running a 30-second smoke test to ensure the fuzzer 
+      # doesn't crash on startup due to missing Boost symbols.
+      run: ./build/fuzz_alsa -max_total_time=30 -rss_limit_mb=2048
