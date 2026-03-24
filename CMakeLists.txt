@@ -17,18 +17,18 @@ find_package(Boost REQUIRED COMPONENTS system)
 
 pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
 
-# --- 2. COVERAGE CONFIGURATION ---
-# I am adding this option so the 'tester' stage can trigger instrumentation.
+# --- 2. COVERAGE CONFIGURATION (NATIVE LLVM) ---
 option(ENABLE_COVERAGE "Enable code coverage reporting" OFF)
+
+if(ENABLE_COVERAGE)
+    # I am choosing the native Clang 18 instrumentation flags.
+    # These are more precise for C++23 than the old GCC-style --coverage.
+    add_compile_options(-fprofile-instr-generate -fcoverage-mapping -fno-inline -g -O0)
+    add_link_options(-fprofile-instr-generate -fcoverage-mapping)
+endif()
 
 # --- 3. LIBRARY TARGET ---
 add_library(gateway_lib STATIC)
-
-# I am choosing to apply coverage flags only to the library being tested.
-if(ENABLE_COVERAGE)
-    target_compile_options(gateway_lib PRIVATE --coverage -fno-inline -g -O0)
-    target_link_options(gateway_lib PRIVATE --coverage)
-endif()
 
 target_include_directories(gateway_lib PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}/include

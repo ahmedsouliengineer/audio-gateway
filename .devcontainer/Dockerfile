@@ -1,7 +1,6 @@
 # --- STAGE 1: Development & Build Environment ---
 FROM mcr.microsoft.com/devcontainers/cpp:1-ubuntu-24.04 AS developer
 
-# I am adding lcov to the base so it is available for the tester stage.
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
     libasound2-dev \
@@ -20,7 +19,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     clang-18 \
     llvm-18 \
     libfuzzer-18-dev \
-    lcov \
+    # I am removing lcov as it is no longer needed for Clang 18 native coverage.
     && rm -rf /var/lib/apt/lists/* && \
     cd /usr/src/googletest && \
     cmake . && \
@@ -30,37 +29,30 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
 RUN usermod -aG audio vscode
 WORKDIR /app
 
-# --- STAGE 2: Tester (Static Analysis & Coverage) ---
+# --- STAGE 2: Tester (Static Analysis & Native Coverage) ---
 FROM developer AS tester
-# I am choosing to copy only what is needed for analysis and testing.
-COPY CMakeLists.txt .
-COPY .clang-format .
-COPY .clang-tidy .
-COPY include/ ./include/
-COPY src/ ./src/
-COPY tests/ ./tests/
+COPY . .
 
 # I am running cppcheck as the first gate.
 RUN cppcheck --enable=all --suppress=missingIncludeSystem src/ include/ --error-exitcode=1
 
-# I am building with coverage enabled.
+# I am building and running tests with native LLVM instrumentation.
 RUN cmake -B build_cov \
     -DCMAKE_BUILD_TYPE=Debug \
     -DCMAKE_CXX_COMPILER=clang++-18 \
     -DENABLE_COVERAGE=ON && \
     cmake --build build_cov && \
-    cd build_cov && ctest --output-on-failure && \
-    lcov --capture --directory . --output-file main_coverage.info && \
-    lcov --remove main_coverage.info '/usr/*' '*/tests/*' '*/googletest/*' -o filtered.info
+    cd build_cov && \
+    ctest --output-on-failure && \
+    # I am merging the raw profile data into a format llvm-cov can read.
+    llvm-profdata-18 merge -sparse default.profraw -o test.profdata && \
+    # I am choosing to output a summary report to the build logs.
+    llvm-cov-18 report ./unit_tests -instr-profile=test.profdata src/
 
 # --- STAGE 3: Builder (The Compilation Gate) ---
 FROM developer AS builder
-# I am repeating the explicit copies to maintain layer independence.
-COPY CMakeLists.txt .
-COPY include/ ./include/
-COPY src/ ./src/
+COPY . .
 
-# I am performing the final optimized Release build.
 RUN cmake -B build \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_CXX_COMPILER=clang++-18 \
@@ -80,7 +72,6 @@ RUN useradd -m gateway_service && usermod -aG audio gateway_service
 USER gateway_service
 WORKDIR /app
 
-# I am only pulling the final binary from the builder stage.
 COPY --from=builder /app/build/AudioGateway .
 
 ENTRYPOINT ["./AudioGateway"]

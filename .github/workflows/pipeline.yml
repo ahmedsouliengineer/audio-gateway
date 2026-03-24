@@ -26,23 +26,32 @@ jobs:
           libboost-all-dev \
           pkg-config \
           cmake \
-          g++ \
           clang-18 \
+          llvm-18 \
           build-essential
 
-    - name: Configure CMake
-      # I am explicitly enabling the fuzzer in the main build to catch 
-      # linking errors early.
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++-18 -DENABLE_FUZZING=ON
+    - name: Configure and Build (Instrumented)
+      # I am enabling both Coverage and Fuzzing to run a comprehensive test suite.
+      run: |
+        cmake -B build \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_CXX_COMPILER=clang++-18 \
+          -DENABLE_COVERAGE=ON \
+          -DENABLE_FUZZING=ON
+        cmake --build build
 
-    - name: Build Project
-      run: cmake --build build --config Release
-
-    - name: Run GTest Suite
+    - name: Run GTest Suite & Generate Coverage
       working-directory: build
-      run: ctest --output-on-failure
+      run: |
+        # I am running the tests to generate the raw profile data.
+        ctest --output-on-failure
+        
+        # I am merging the raw profile into the indexed format Clang expects.
+        llvm-profdata-18 merge -sparse default.profraw -o test.profdata
+        
+        # I am outputting a summary to the GitHub Actions log for immediate visibility.
+        llvm-cov-18 report ./unit_tests -instr-profile=test.profdata src/
 
     - name: Run Fuzzer (Short Smoke Test)
-      # I am running a 30-second smoke test to ensure the fuzzer 
-      # doesn't crash on startup due to missing Boost symbols.
+      # I am running the fuzzer to ensure the instrumentation doesn't conflict.
       run: ./build/fuzz_alsa -max_total_time=30 -rss_limit_mb=2048
