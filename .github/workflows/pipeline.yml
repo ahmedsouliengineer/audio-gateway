@@ -17,7 +17,6 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install System Dependencies
-      # I am adding llvm-18 to get the llvm-gcov wrapper required for Clang coverage.
       run: |
         apt-get update && apt-get install -y \
           libasound2-dev \
@@ -50,25 +49,23 @@ jobs:
           -DENABLE_FUZZING=ON
         cmake --build build_cov
 
-    - name: Run GTest Suite & Generate Coverage
+    - name: Run GTest Suite & Generate Coverage (Clang-LLVM Bridge)
       working-directory: build_cov
-      # I am creating a shim script to bridge Clang 18 and LCOV.
-      # This provides a single executable that geninfo (lcov's backend) can find.
-      # I am running the tests as usual.
-      # I am pointing lcov to the absolute path of our shim.
       run: |
         echo '#!/bin/bash' > llvm-gcov.sh
         echo 'exec llvm-cov-18 gcov "$@"' >> llvm-gcov.sh
         chmod +x llvm-gcov.sh
-
+        
         ctest --output-on-failure
         
         lcov --capture \
              --directory . \
              --output-file coverage.info \
-             --gcov-tool $(pwd)/llvm-gcov.sh
+             --gcov-tool $(pwd)/llvm-gcov.sh \
+             --ignore-errors inconsistent
         
-        lcov --remove coverage.info '/usr/*' '*/tests/*' '*/googletest/*' -o filtered.info
+        lcov --remove coverage.info '/usr/*' '*/tests/*' '*/googletest/*' -o filtered.info \
+             --ignore-errors inconsistent
 
     - name: Upload Coverage Report
       uses: actions/upload-artifact@v4
