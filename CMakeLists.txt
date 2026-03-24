@@ -11,6 +11,9 @@ find_package(ALSA REQUIRED)
 find_package(GTest REQUIRED)
 find_package(PkgConfig REQUIRED)
 
+# I am adding Boost.System to verify the link environment.
+find_package(Boost REQUIRED COMPONENTS system)
+
 # I am using PkgConfig to locate ZeroMQ.
 pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
 
@@ -18,13 +21,20 @@ pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
 add_library(gateway_lib STATIC)
 target_include_directories(gateway_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
-# I am linking ALSA and ZeroMQ.
+# I am linking ALSA, ZeroMQ, and now Boost.
 target_link_libraries(gateway_lib 
     PRIVATE 
         ALSA::ALSA 
         PkgConfig::ZMQ
+        Boost::system
 )
-target_sources(gateway_lib PRIVATE src/alsa_impl.cpp)
+
+# I am including src/command_listener.cpp since we previously 
+# implemented the ZeroMQ logic there.
+target_sources(gateway_lib PRIVATE 
+    src/alsa_impl.cpp 
+    src/command_listener.cpp
+)
 
 # --- 3. EXECUTABLE TARGET ---
 add_executable(${PROJECT_NAME} src/main.cpp)
