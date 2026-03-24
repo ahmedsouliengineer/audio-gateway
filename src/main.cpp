@@ -3,12 +3,13 @@
 #include <thread>
 #include <chrono>
 
-int main() {
+int main()
+{
     // I am targeting the 'default' ALSA device.
     AlsaHardware hw("default");
 
     std::cout << "Audio Gateway: Initializing hardware...\n";
-    
+
     auto result = hw.initialize();
     if (result.has_value()) {
         std::cerr << "Audio Gateway: Critical Failure during startup.\n";
