@@ -1,4 +1,3 @@
----
 Language: Cpp
 BasedOnStyle: LLVM
 
@@ -6,7 +5,8 @@ BasedOnStyle: LLVM
 ColumnLimit: 100
 IndentWidth: 4
 UseTab: Never
-Standard: c++17
+# I am choosing to sync this with your CMake C++23 requirement.
+Standard: Latest
 
 # 2. Braces & Alignment
 BreakBeforeBraces: Custom
@@ -41,4 +41,3 @@ AllowShortLoopsOnASingleLine: false
 SpaceAfterCStyleCast: true
 SpaceBeforeRangeBasedForLoopColon: true
 PointerAlignment: Left
----
