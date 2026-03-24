@@ -22,6 +22,7 @@ jobs:
           libasound2-dev \
           libgtest-dev \
           libzmq3-dev \
+          cppzmq-dev \
           pkg-config \
           cmake \
           g++ \

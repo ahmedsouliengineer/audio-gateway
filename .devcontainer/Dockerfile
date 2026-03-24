@@ -7,6 +7,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     libasound2-dev \
     libgtest-dev \
     libzmq3-dev \
+    cppzmq-dev \
     pkg-config \
     cmake \
     g++ \
@@ -47,6 +48,7 @@ FROM ubuntu:24.04 AS release
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2t64 \
     libzmq5 \
+    cppzmq-dev \
     alsa-utils \
     && rm -rf /var/lib/apt/lists/*
 
