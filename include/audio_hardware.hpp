@@ -1,30 +1,27 @@
-#pragma once
-
-#include <string>
+#include <cstdint>
 #include <optional>
-#include <alsa/asoundlib.h>
 
-// I am using a scoped enum for type safety. 
-enum class AlsaError {
-    OpenFailed,
-    ConfigFailed,
-    StreamError
+enum class AlsaError : std::uint8_t
+{
+    None,
+    OpenFailed
 };
 
-class AlsaHardware {
+class AlsaHardware
+{
 public:
-    explicit AlsaHardware(std::string device_name);
+    AlsaHardware() = default;
+    auto operator=(const AlsaHardware&) -> AlsaHardware& = delete;
+    AlsaHardware(const AlsaHardware&) = delete;
+
+    // Manual destructor is needed to call close()
     ~AlsaHardware();
 
-    // I am preventing copying to avoid double-closing the ALSA handle.
-    AlsaHardware(const AlsaHardware&) = delete;
-    AlsaHardware& operator=(const AlsaHardware&) = delete;
-
-    // Returns nullopt on success, or an error code on failure.
-    std::optional<AlsaError> initialize();
-    void close();
+    auto initialize() -> std::optional<AlsaError>;
+    auto close() -> void;
 
 private:
-    std::string device_name_;
-    snd_pcm_t* handle_{nullptr};
+    // I am adding handle_ as a void* to keep the header clean of ALSA types.
+    // Initializing to nullptr ensures we don't close random memory.
+    void* handle_{nullptr};
 };

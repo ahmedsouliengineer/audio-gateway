@@ -1,38 +1,38 @@
+#include <alsa/asoundlib.h>
 #include <iostream>
+#include <optional>
 
 #include "audio_hardware.hpp"
-
-AlsaHardware::AlsaHardware(std::string device_name) : device_name_(std::move(device_name))
-{}
 
 AlsaHardware::~AlsaHardware()
 {
     close();
 }
 
-// I am choosing a trailing return type here to satisfy the modern C++23 style
-// required by the clang-tidy 'modernize' check.
 auto AlsaHardware::initialize() -> std::optional<AlsaError>
 {
-    // I am attempting to open the PCM device for capture.
-    int err = snd_pcm_open(&handle_, device_name_.c_str(), SND_PCM_STREAM_CAPTURE, 0);
+    // I am using a local pointer as a bridge.
+    // This avoids reinterpret_cast on the member variable address.
+    snd_pcm_t* pcm_bridge = nullptr;
 
-    if (err < 0) {
-        std::cerr << "ALSA: Cannot open device " << device_name_ << " (" << snd_strerror(err)
-                  << ")\n";
+    int return_code = snd_pcm_open(&pcm_bridge, "default", SND_PCM_STREAM_CAPTURE, 0);
+
+    if (return_code < 0) {
+        std::cerr << "ALSA: Cannot open device default (" << snd_strerror(return_code) << ")\n";
         return AlsaError::OpenFailed;
     }
+
+    // I am storing the successfully opened handle back into our opaque pointer.
+    handle_ = static_cast<void*>(pcm_bridge);
 
     return std::nullopt;
 }
 
-// I am choosing a trailing return type for consistency across the implementation.
 auto AlsaHardware::close() -> void
 {
-    // I am using an explicit nullptr check here to resolve the
-    // 'readability-implicit-bool-conversion' warning.
     if (handle_ != nullptr) {
-        snd_pcm_close(handle_);
+        // static_cast is allowed by Core Guidelines for void* conversions.
+        snd_pcm_close(static_cast<snd_pcm_t*>(handle_));
         handle_ = nullptr;
     }
 }

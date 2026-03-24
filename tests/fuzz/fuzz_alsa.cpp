@@ -1,23 +1,19 @@
-#include <stdint.h>
-#include <stddef.h>
-#include <string>
+#include <cstddef> // Use C++ headers instead of .h
+#include <cstdint>
+#include <span>
 #include <vector>
 
-// I am defining the fuzz entry point.
-// The goal is to see if random byte buffers can crash our
-// internal data processing logic.
-extern "C" int LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size)
+// I am using the trailing return type for the fuzzer entry point.
+extern "C" auto LLVMFuzzerTestOneInput(const uint8_t* Data, size_t Size) -> int
 {
-    // I am skipping empty inputs to keep the fuzzer focused on processing.
-    if (Size < 1)
+    // I am adding braces to satisfy 'readability-braces-around-statements'.
+    if (Size < 1) {
         return 0;
+    }
 
-    // I am simulating how our ALSA implementation will handle incoming bytes.
-    // In the future, we will pass 'Data' directly into our RingBuffer or
-    // Audio Parser classes here.
-    std::vector<uint8_t> mock_buffer(Data, Data + Size);
+    // I am using std::span or direct vector initialization to avoid pointer arithmetic.
+    // Clang-tidy hates 'Data + Size'.
+    std::vector<uint8_t> mock_buffer(std::span(Data, Size).begin(), std::span(Data, Size).end());
 
-    // If the data matches a "crash" pattern we haven't handled,
-    // the AddressSanitizer (ASan) will stop the execution here.
     return 0;
 }
