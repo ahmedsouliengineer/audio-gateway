@@ -17,6 +17,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Install System Dependencies
+      # I am adding lcov here to support the coverage report generation.
       run: |
         apt-get update && apt-get install -y \
           libasound2-dev \
@@ -28,21 +29,42 @@ jobs:
           cmake \
           g++ \
           clang-18 \
-          build-essential
+          build-essential \
+          cppcheck \
+          clang-format \
+          lcov
 
-    - name: Configure CMake
-      # I am explicitly enabling the fuzzer in the main build to catch 
-      # linking errors early.
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++-18 -DENABLE_FUZZING=ON
+    - name: Run Static Analysis (Cppcheck)
+      # I am choosing to fail the build if high-severity issues are found.
+      run: cppcheck --enable=warning,performance,portability --error-exitcode=1 src/ include/
 
-    - name: Build Project
-      run: cmake --build build --config Release
+    - name: Check Code Formatting
+      # I am ensuring the code adheres to our .clang-format rules.
+      run: find src include tests -name "*.cpp" -o -name "*.h" | xargs clang-format --dry-run --Werror
 
-    - name: Run GTest Suite
-      working-directory: build
-      run: ctest --output-on-failure
+    - name: Configure and Build (Coverage Mode)
+      # I am building in Debug mode with Coverage enabled to get accurate metrics.
+      run: |
+        cmake -B build_cov \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DCMAKE_CXX_COMPILER=clang++-18 \
+          -DENABLE_COVERAGE=ON \
+          -DENABLE_FUZZING=ON
+        cmake --build build_cov
+
+    - name: Run GTest Suite & Generate Coverage
+      working-directory: build_cov
+      run: |
+        ctest --output-on-failure
+        lcov --capture --directory . --output-file coverage.info
+        lcov --remove coverage.info '/usr/*' '*/tests/*' '*/googletest/*' -o filtered.info
+
+    - name: Upload Coverage Report
+      # I am choosing to upload the filtered coverage data as a build artifact.
+      uses: actions/upload-artifact@v4
+      with:
+        name: code-coverage
+        path: build_cov/filtered.info
 
     - name: Run Fuzzer (Short Smoke Test)
-      # I am running a 30-second smoke test to ensure the fuzzer 
-      # doesn't crash on startup due to missing Boost symbols.
-      run: ./build/fuzz_alsa -max_total_time=30 -rss_limit_mb=2048
+      run: ./build_cov/fuzz_alsa -max_total_time=30 -rss_limit_mb=2048
