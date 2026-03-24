@@ -37,7 +37,6 @@ target_link_libraries(gateway_lib
 
 target_sources(gateway_lib PRIVATE 
     src/alsa_impl.cpp 
-    src/command_listener.cpp
 )
 
 # --- 3. EXECUTABLE TARGET ---
