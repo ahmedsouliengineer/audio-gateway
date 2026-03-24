@@ -18,17 +18,17 @@ find_package(Boost REQUIRED COMPONENTS system)
 pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
 
 # --- 2. COVERAGE CONFIGURATION ---
-# I am adding this option so the 'tester' stage can trigger instrumentation.
 option(ENABLE_COVERAGE "Enable code coverage reporting" OFF)
+
+if(ENABLE_COVERAGE)
+    # I am applying flags globally so all executables link the LLVM profile runtime.
+    # -fno-inline is vital to ensure coverage maps to the actual lines of code.
+    add_compile_options(--coverage -fno-inline -g -O0)
+    add_link_options(--coverage)
+endif()
 
 # --- 3. LIBRARY TARGET ---
 add_library(gateway_lib STATIC)
-
-# I am choosing to apply coverage flags only to the library being tested.
-if(ENABLE_COVERAGE)
-    target_compile_options(gateway_lib PRIVATE --coverage -fno-inline -g -O0)
-    target_link_options(gateway_lib PRIVATE --coverage)
-endif()
 
 target_include_directories(gateway_lib PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}/include
@@ -48,6 +48,7 @@ target_sources(gateway_lib PRIVATE
 
 # --- 4. EXECUTABLE TARGET ---
 add_executable(${PROJECT_NAME} src/main.cpp)
+# I am linking the instrumented library into the instrumented executable.
 target_link_libraries(${PROJECT_NAME} PRIVATE gateway_lib)
 
 # --- 5. GOOGLETEST ---
@@ -62,6 +63,7 @@ option(ENABLE_FUZZING "Build the Fuzzer targets" OFF)
 if(ENABLE_FUZZING AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_executable(fuzz_alsa tests/fuzz/fuzz_alsa.cpp)
     target_link_libraries(fuzz_alsa PRIVATE gateway_lib)
+    # I am keeping fuzzing sanitizers separate as they shouldn't usually mix with global coverage flags.
     target_compile_options(fuzz_alsa PRIVATE -fsanitize=fuzzer,address,undefined -fno-omit-frame-pointer)
     target_link_options(fuzz_alsa PRIVATE -fsanitize=fuzzer,address,undefined)
 endif()
