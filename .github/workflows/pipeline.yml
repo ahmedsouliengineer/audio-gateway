@@ -52,13 +52,21 @@ jobs:
 
     - name: Run GTest Suite & Generate Coverage
       working-directory: build_cov
-        # I am using llvm-cov-18 with the 'gcov' flag to bridge the gap between Clang and lcov.
+      # I am creating a shim script to bridge Clang 18 and LCOV.
+      # This provides a single executable that geninfo (lcov's backend) can find.
+      # I am running the tests as usual.
+      # I am pointing lcov to the absolute path of our shim.
       run: |
+        echo '#!/bin/bash' > llvm-gcov.sh
+        echo 'exec llvm-cov-18 gcov "$@"' >> llvm-gcov.sh
+        chmod +x llvm-gcov.sh
+
         ctest --output-on-failure
+        
         lcov --capture \
              --directory . \
              --output-file coverage.info \
-             --gcov-tool "/usr/bin/llvm-cov-18 gcov"
+             --gcov-tool $(pwd)/llvm-gcov.sh
         
         lcov --remove coverage.info '/usr/*' '*/tests/*' '*/googletest/*' -o filtered.info
 
