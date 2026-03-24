@@ -11,23 +11,30 @@ find_package(ALSA REQUIRED)
 find_package(GTest REQUIRED)
 find_package(PkgConfig REQUIRED)
 
-# I am telling CMake exactly where to look for Boost libraries on Ubuntu 24.04.
 set(BOOST_LIBRARYDIR "/usr/lib/x86_64-linux-gnu")
-set(Boost_NO_BOOST_CMAKE ON) # I am disabling the "Config" mode which often fails on Noble.
-
+set(Boost_NO_BOOST_CMAKE ON) 
 find_package(Boost REQUIRED COMPONENTS system)
 
-# I am using PkgConfig for ZeroMQ (Verified).
 pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
 
-# --- 2. LIBRARY TARGET ---
+# --- 2. COVERAGE CONFIGURATION ---
+# I am adding this option so the 'tester' stage can trigger instrumentation.
+option(ENABLE_COVERAGE "Enable code coverage reporting" OFF)
+
+# --- 3. LIBRARY TARGET ---
 add_library(gateway_lib STATIC)
+
+# I am choosing to apply coverage flags only to the library being tested.
+if(ENABLE_COVERAGE)
+    target_compile_options(gateway_lib PRIVATE --coverage -fno-inline -g -O0)
+    target_link_options(gateway_lib PRIVATE --coverage)
+endif()
+
 target_include_directories(gateway_lib PUBLIC 
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${Boost_INCLUDE_DIRS}
 )
 
-# I am linking ALSA, ZeroMQ, and the Boost variables.
 target_link_libraries(gateway_lib 
     PRIVATE 
         ALSA::ALSA 
@@ -39,18 +46,18 @@ target_sources(gateway_lib PRIVATE
     src/alsa_impl.cpp 
 )
 
-# --- 3. EXECUTABLE TARGET ---
+# --- 4. EXECUTABLE TARGET ---
 add_executable(${PROJECT_NAME} src/main.cpp)
 target_link_libraries(${PROJECT_NAME} PRIVATE gateway_lib)
 
-# --- 4. GOOGLETEST ---
+# --- 5. GOOGLETEST ---
 enable_testing()
 add_executable(unit_tests tests/unit/test_hardware.cpp)
 target_link_libraries(unit_tests PRIVATE gateway_lib GTest::gtest GTest::gtest_main)
 include(GoogleTest)
 gtest_discover_tests(unit_tests)
 
-# --- 5. FUZZING ---
+# --- 6. FUZZING ---
 option(ENABLE_FUZZING "Build the Fuzzer targets" OFF)
 if(ENABLE_FUZZING AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
     add_executable(fuzz_alsa tests/fuzz/fuzz_alsa.cpp)
