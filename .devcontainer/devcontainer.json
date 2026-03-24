@@ -2,10 +2,7 @@
     "name": "Audio Gateway Dev Environment",
     "build": {
         "dockerfile": "Dockerfile",
-        // I am setting the context to '..' so Docker can see src, tests, and include.
         "context": "..",
-        // I am targeting the 'developer' stage so the 'vscode' user 
-        // and build tools are available for development.
         "target": "developer"
     },
     "runArgs": [
@@ -22,10 +19,14 @@
             ],
             "settings": {
                 "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
-                "C_Cpp.codeAnalysis.clangTidy.enabled": true
+                "C_Cpp.codeAnalysis.clangTidy.enabled": true,
+                // I am enabling auto-format here so it works out-of-the-box.
+                "editor.formatOnSave": true,
+                "editor.defaultFormatter": "ms-vscode.cpptools",
+                "C_Cpp.clang_format_style": "file",
+                "C_Cpp.clang_format_fallbackStyle": "none"
             }
         }
     },
-    // I REMOVED THE "features" SECTION TO BYPASS THE CREDENTIAL/NODE ERRORS
     "remoteUser": "vscode"
 }
