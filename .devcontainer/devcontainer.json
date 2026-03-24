@@ -1,7 +1,12 @@
 {
     "name": "Audio Gateway Dev Environment",
     "build": {
-        "dockerfile": "Dockerfile"
+        "dockerfile": "Dockerfile",
+        // I am setting the context to '..' so Docker can see src, tests, and include.
+        "context": "..",
+        // I am targeting the 'developer' stage so the 'vscode' user 
+        // and build tools are available for development.
+        "target": "developer"
     },
     "runArgs": [
         "--device=/dev/snd:/dev/snd",
