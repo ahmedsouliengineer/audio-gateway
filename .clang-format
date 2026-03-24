@@ -5,7 +5,6 @@ BasedOnStyle: LLVM
 ColumnLimit: 100
 IndentWidth: 4
 UseTab: Never
-# I am choosing to sync this with your CMake C++23 requirement.
 Standard: Latest
 
 # 2. Braces & Alignment
@@ -22,7 +21,9 @@ BraceWrapping:
   SplitEmptyFunction: false
 
 # 3. Cleanliness & Organization
-SortIncludes: Never
+# I am setting SortIncludes to true now because we've defined 
+# clear Categories below to prevent header-ordering bugs.
+SortIncludes: true
 IncludeBlocks: Regroup
 IncludeCategories:
   - Regex: '^<.*'
@@ -40,4 +41,5 @@ AllowShortLoopsOnASingleLine: false
 # 5. Space Handling
 SpaceAfterCStyleCast: true
 SpaceBeforeRangeBasedForLoopColon: true
+# I am choosing Left alignment (int* p) as it is the standard for modern C++.
 PointerAlignment: Left

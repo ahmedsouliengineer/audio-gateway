@@ -14,17 +14,23 @@
             "extensions": [
                 "ms-vscode.cpptools",
                 "ms-vscode.cmake-tools",
-                "xaver.clang-format",
                 "llvm-vs-code-extensions.vscode-clangd"
             ],
             "settings": {
-                "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
-                "C_Cpp.codeAnalysis.clangTidy.enabled": true,
-                // I am enabling auto-format here so it works out-of-the-box.
+                // I am choosing clangd as the primary engine for better C++23 support.
+                "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
                 "editor.formatOnSave": true,
-                "editor.defaultFormatter": "ms-vscode.cpptools",
-                "C_Cpp.clang_format_style": "file",
-                "C_Cpp.clang_format_fallbackStyle": "none"
+                
+                // I am disabling Microsoft's IntelliSense to prevent conflicts with clangd.
+                "C_Cpp.intelliSenseEngine": "disabled",
+                "C_Cpp.formatting": "disabled", 
+                
+                "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
+                "clangd.arguments": [
+                    "--compile-commands-dir=${workspaceFolder}/build",
+                    "--clang-tidy",
+                    "--fallback-style=llvm"
+                ]
             }
         }
     },
