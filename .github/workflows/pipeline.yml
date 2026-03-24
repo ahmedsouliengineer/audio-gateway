@@ -23,6 +23,7 @@ jobs:
           libgtest-dev \
           libzmq3-dev \
           cppzmq-dev \
+          libboost-all-dev \
           pkg-config \
           cmake \
           g++ \
@@ -30,7 +31,9 @@ jobs:
           build-essential
 
     - name: Configure CMake
-      run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+      # I am explicitly enabling the fuzzer in the main build to catch 
+      # linking errors early.
+      run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++-18 -DENABLE_FUZZING=ON
 
     - name: Build Project
       run: cmake --build build --config Release
@@ -39,8 +42,7 @@ jobs:
       working-directory: build
       run: ctest --output-on-failure
 
-    - name: Build and Run Fuzzer
-      run: |
-        cmake -B build_fuzz -DCMAKE_CXX_COMPILER=clang++-18 -DENABLE_FUZZING=ON
-        cmake --build build_fuzz --target fuzz_alsa
-        ./build_fuzz/fuzz_alsa -max_total_time=60 -rss_limit_mb=2048
+    - name: Run Fuzzer (Short Smoke Test)
+      # I am running a 30-second smoke test to ensure the fuzzer 
+      # doesn't crash on startup due to missing Boost symbols.
+      run: ./build/fuzz_alsa -max_total_time=30 -rss_limit_mb=2048

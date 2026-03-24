@@ -1,13 +1,14 @@
 # --- STAGE 1: Development & Build Environment ---
 FROM mcr.microsoft.com/devcontainers/cpp:1-ubuntu-24.04 AS developer
 
-# I am installing ZeroMQ and PkgConfig. I am choosing to exclude Boost for now.
+# I am adding libboost-all-dev to the installation list.
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
     libasound2-dev \
     libgtest-dev \
     libzmq3-dev \
     cppzmq-dev \
+    libboost-all-dev \
     pkg-config \
     cmake \
     g++ \
@@ -48,7 +49,7 @@ FROM ubuntu:24.04 AS release
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libasound2t64 \
     libzmq5 \
-    cppzmq-dev \
+    libboost-system1.83.0 \
     alsa-utils \
     && rm -rf /var/lib/apt/lists/*
 

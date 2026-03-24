@@ -11,26 +11,30 @@ find_package(ALSA REQUIRED)
 find_package(GTest REQUIRED)
 find_package(PkgConfig REQUIRED)
 
-# I am adding Boost.System to verify the link environment.
+# I am telling CMake exactly where to look for Boost libraries on Ubuntu 24.04.
+set(BOOST_LIBRARYDIR "/usr/lib/x86_64-linux-gnu")
+set(Boost_NO_BOOST_CMAKE ON) # I am disabling the "Config" mode which often fails on Noble.
+
 find_package(Boost REQUIRED COMPONENTS system)
 
-# I am using PkgConfig to locate ZeroMQ.
+# I am using PkgConfig for ZeroMQ (Verified).
 pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
 
 # --- 2. LIBRARY TARGET ---
 add_library(gateway_lib STATIC)
-target_include_directories(gateway_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
+target_include_directories(gateway_lib PUBLIC 
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${Boost_INCLUDE_DIRS}
+)
 
-# I am linking ALSA, ZeroMQ, and now Boost.
+# I am linking ALSA, ZeroMQ, and the Boost variables.
 target_link_libraries(gateway_lib 
     PRIVATE 
         ALSA::ALSA 
         PkgConfig::ZMQ
-        Boost::system
+        ${Boost_LIBRARIES}
 )
 
-# I am including src/command_listener.cpp since we previously 
-# implemented the ZeroMQ logic there.
 target_sources(gateway_lib PRIVATE 
     src/alsa_impl.cpp 
     src/command_listener.cpp
