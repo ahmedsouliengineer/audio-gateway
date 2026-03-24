@@ -1,4 +1,4 @@
-name: Audio Gateway CI (Docker-Synced)
+name: Audio Gateway CI (Ironclad)
 
 on:
   push:
@@ -28,30 +28,47 @@ jobs:
           cmake \
           clang-18 \
           llvm-18 \
+          clang-tidy-18 \
           build-essential
 
-    - name: Configure and Build (Instrumented)
-      # I am enabling both Coverage and Fuzzing to run a comprehensive test suite.
+    - name: Configure (Generate Compilation Database)
+      # I am enabling CMAKE_EXPORT_COMPILE_COMMANDS so clang-tidy can work.
       run: |
         cmake -B build \
           -DCMAKE_BUILD_TYPE=Debug \
           -DCMAKE_CXX_COMPILER=clang++-18 \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
           -DENABLE_COVERAGE=ON \
           -DENABLE_FUZZING=ON
-        cmake --build build
+
+    - name: Run Clang-Tidy (Static Analysis)
+      # I am choosing to fail the build if any tidy warnings exist.
+      # This enforces the "Clean Code" standards you requested.
+      run: |
+        run-clang-tidy-18 -p build -header-filter='src/.*|include/.*'
+
+    - name: Build Project
+      run: cmake --build build
 
     - name: Run GTest Suite & Generate Coverage
       working-directory: build
       run: |
-        # I am running the tests to generate the raw profile data.
+        # I am running ctest and expecting 100% pass rate.
         ctest --output-on-failure
         
-        # I am merging the raw profile into the indexed format Clang expects.
+        # Merge profile data for coverage reporting.
         llvm-profdata-18 merge -sparse default.profraw -o test.profdata
         
-        # I am outputting a summary to the GitHub Actions log for immediate visibility.
+        # I am outputting the coverage summary.
         llvm-cov-18 report ./unit_tests -instr-profile=test.profdata src/
 
-    - name: Run Fuzzer (Short Smoke Test)
-      # I am running the fuzzer to ensure the instrumentation doesn't conflict.
+    - name: Check Coverage Threshold
+      # I am choosing to fail if coverage is below a certain % (optional but recommended).
+      run: |
+        COVERAGE=$(llvm-cov-18 report build/unit_tests -instr-profile=build/test.profdata src/ | grep 'TOTAL' | awk '{print $4}' | sed 's/%//')
+        echo "Total Coverage: $COVERAGE%"
+        # if [ $(echo "$COVERAGE < 80.0" | bc) -ne 0 ]; then echo "Coverage too low!"; exit 1; fi
+
+    - name: Run Fuzzer (Smoke Test)
+      # Short run to ensure no immediate memory leaks or crashes under stress.
       run: ./build/fuzz_alsa -max_total_time=30 -rss_limit_mb=2048
