@@ -48,6 +48,7 @@ timeout-*
 # I want to share my recommended extensions and debug configurations with the team.
 !.vscode/extensions.json
 !.vscode/launch.json
+!.vscode/settings.json
 
 # I am blocking Vim and JetBrains (CLion) temporary files to keep the repo clean.
 *.swp

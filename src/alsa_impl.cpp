@@ -1,5 +1,6 @@
-#include "audio_hardware.hpp"
 #include <iostream>
+
+#include "audio_hardware.hpp"
 
 AlsaHardware::AlsaHardware(std::string device_name) : device_name_(std::move(device_name))
 {}

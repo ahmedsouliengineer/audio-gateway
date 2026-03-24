@@ -1,14 +1,16 @@
 Language: Cpp
 BasedOnStyle: LLVM
-
-# 1. Layout & Geometry
-ColumnLimit: 100
-IndentWidth: 4
-UseTab: Never
-Standard: Latest
-
-# 2. Braces & Alignment
-BreakBeforeBraces: Custom
+AccessModifierOffset: -4
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignOperands: true
+AlignTrailingComments: true
+AllowShortFunctionsOnASingleLine: None
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+BinPackArguments: true
+BinPackParameters: true
 BraceWrapping:
   AfterClass: true
   AfterControlStatement: Never
@@ -19,27 +21,20 @@ BraceWrapping:
   AfterUnion: true
   BeforeElse: false
   SplitEmptyFunction: false
-
-# 3. Cleanliness & Organization
-# I am setting SortIncludes to true now because we've defined 
-# clear Categories below to prevent header-ordering bugs.
-SortIncludes: true
+BreakBeforeBraces: Custom
+ColumnLimit: 100
+FixNamespaceComments: true
 IncludeBlocks: Regroup
 IncludeCategories:
   - Regex: '^<.*'
     Priority: 1
   - Regex: '.*'
     Priority: 2
-
-# 4. Modern C++ Refinements
-FixNamespaceComments: true
+IndentWidth: 4
+PointerAlignment: Left
 ReflowComments: true
-AllowShortFunctionsOnASingleLine: None
-AllowShortIfStatementsOnASingleLine: Never
-AllowShortLoopsOnASingleLine: false
-
-# 5. Space Handling
+SortIncludes: true
 SpaceAfterCStyleCast: true
 SpaceBeforeRangeBasedForLoopColon: true
-# I am choosing Left alignment (int* p) as it is the standard for modern C++.
-PointerAlignment: Left
+Standard: Latest
+UseTab: Never
