@@ -11,16 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Code
-      uses: uses/checkout@v4
+      # I am fixing the typo: 'uses/checkout' becomes 'actions/checkout'
+      uses: actions/checkout@v4
 
     - name: Install Host Dependencies
-      # I am choosing to install these on the runner to allow baremetal execution.
+      # I am choosing to add 'llvm' here so llvm-cov is available on the host.
       run: |
         sudo apt-get update
-        sudo apt-get install -y libasound2-dev libgtest-dev cmake clang clang-tidy cppcheck
+        sudo apt-get install -y libasound2-dev libgtest-dev cmake clang clang-tidy cppcheck llvm
 
     - name: Build Developer Environment (Tooling Only)
-      # We keep this to run Step 1 and 2 with the exact Clang 18 versions.
       run: docker build --target developer -t gateway-env .
 
     - name: Step 1: Static Analysis (Cppcheck)
@@ -29,19 +29,17 @@ jobs:
         cppcheck --enable=all --suppress=missingIncludeSystem src/ include/ --error-exitcode=1
 
     - name: Step 2: Linting (Clang-Tidy)
-      # Fixed the command string to ensure valid YAML syntax.
       run: |
         docker run --rm -v ${{ github.workspace }}:/app -w /app gateway-env \
         bash -c "cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_COMPILER=clang++ && run-clang-tidy -p build -header-filter='src/.*|include/.*'"
 
     - name: Step 3: Baremetal Compilation
-      # I am choosing to build on the host with coverage instrumentation.
+      # I am fixing '$(proc)' to '$(nproc)' and ensuring strict YAML indentation.
       run: |
         cmake -B build -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -fcoverage-mapping"
-        cmake --build build --parallel $(proc)
+        cmake --build build --parallel $(nproc)
 
     - name: Step 4: Unit Testing (Baremetal)
-      # Running on the host provides better access to system audio drivers.
       run: |
         cd build
         ctest --output-on-failure
