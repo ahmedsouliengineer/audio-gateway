@@ -49,6 +49,7 @@ FROM developer AS builder
 COPY CMakeLists.txt ./
 COPY include/ ./include/
 COPY src/ ./src/
+COPY tests/ ./tests/
 
 RUN cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_CXX_COMPILER=clang++ -DENABLE_FUZZING=ON && \
     cmake --build build --target AudioGateway
