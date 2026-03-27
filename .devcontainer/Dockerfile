@@ -10,12 +10,13 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     llvm-18 libfuzzer-18-dev \
     && rm -rf /var/lib/apt/lists/*
 
-RUN ln -s /usr/bin/clang-18 /usr/bin/clang && \
-    ln -s /usr/bin/clang++-18 /usr/bin/clang++ && \
-    ln -s /usr/bin/clang-tidy-18 /usr/bin/clang-tidy && \
-    ln -s /usr/bin/run-clang-tidy-18 /usr/bin/run-clang-tidy && \
-    ln -s /usr/bin/llvm-cov-18 /usr/bin/llvm-cov && \
-    ln -s /usr/bin/llvm-profdata-18 /usr/bin/llvm-profdata
+# I am using -sf to force the symlink creation even if the file already exists.
+RUN ln -sf /usr/bin/clang-18 /usr/bin/clang && \
+    ln -sf /usr/bin/clang++-18 /usr/bin/clang++ && \
+    ln -sf /usr/bin/clang-tidy-18 /usr/bin/clang-tidy && \
+    ln -sf /usr/bin/run-clang-tidy-18 /usr/bin/run-clang-tidy && \
+    ln -sf /usr/bin/llvm-cov-18 /usr/bin/llvm-cov && \
+    ln -sf /usr/bin/llvm-profdata-18 /usr/bin/llvm-profdata
 
 RUN cd /usr/src/googletest && cmake . && cmake --build . && cp lib/*.a /usr/lib
 
