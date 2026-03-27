@@ -23,11 +23,9 @@ jobs:
       run: cppcheck --enable=all -I include --suppress=missingIncludeSystem src/ include/ --error-exitcode=1
 
     - name: "3. Linting (Clang-Tidy)"
-      # I am enabling the flags here so clang-tidy understands the C++23 features in your headers.
       run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_COMPILER=clang++ -DENABLE_COVERAGE=ON -DENABLE_FUZZING=ON && find src include -name "*.cpp" -o -name "*.hpp" | xargs clang-tidy -p build --header-filter='.*'
 
     - name: "4. Compilation"
-      # I am choosing to explicitly pass BOTH options to match your CMake logic.
       run: cmake -B build -DCMAKE_CXX_COMPILER=clang++ -DENABLE_COVERAGE=ON -DENABLE_FUZZING=ON && cmake --build build --parallel $(nproc)
 
     - name: "5. Unit Testing (GTest)"
@@ -37,8 +35,8 @@ jobs:
       run: cd build && llvm-profdata merge -sparse default.profraw -o test.profdata && llvm-cov report ./unit_tests -instr-profile=test.profdata ../src/alsa_impl.cpp
 
     - name: "7. Fuzzing Smoke Test"
-      # This binary will now exist because -DENABLE_FUZZING=ON was passed in Step 4.
       run: ./build/fuzz_alsa -max_total_time=10 -rss_limit_mb=1024
 
     - name: "8. Container Build & Launch Test"
-      run: docker build -t audio-gateway-prod . && docker run -d --name test-container audio-gateway-prod && sleep 2 && docker ps | grep test-container
+      # I am choosing to specify the file path while keeping the context at root.
+      run: docker build -t audio-gateway-prod -f .devcontainer/Dockerfile . && docker run -d --name test-container audio-gateway-prod && sleep 2 && docker ps | grep test-container
