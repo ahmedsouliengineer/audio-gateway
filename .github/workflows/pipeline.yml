@@ -17,7 +17,7 @@ jobs:
       run: sudo apt-get update && sudo apt-get install -y libasound2-dev libgtest-dev cmake clang-18 llvm-18 clang-tidy-18 cppcheck build-essential
 
     - name: "2. Static Analysis (Cppcheck)"
-      run: cppcheck --enable=all --suppress=missingIncludeSystem src/ include/ --error-exitcode=1
+      run: cppcheck --enable=all -I include --suppress=missingIncludeSystem src/ include/ --error-exitcode=1
 
     - name: "3. Linting (Clang-Tidy)"
       run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_COMPILER=clang++-18 && find src include -name "*.cpp" -o -name "*.hpp" | xargs clang-tidy-18 -p build --header-filter='.*'
