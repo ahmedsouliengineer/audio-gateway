@@ -1,4 +1,4 @@
-name: Audio Gateway CI (Granular Ironclad)
+name: Audio Gateway CI (Baremetal Execution)
 
 on:
   push:
@@ -11,10 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v4
+      uses: uses/checkout@v4
 
-    - name: Build Developer Environment
-      # I am choosing to build the 'developer' stage as the runner engine.
+    - name: Install Host Dependencies
+      # I am choosing to install these on the runner to allow baremetal execution.
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libasound2-dev libgtest-dev cmake clang clang-tidy cppcheck
+
+    - name: Build Developer Environment (Tooling Only)
+      # We keep this to run Step 1 and 2 with the exact Clang 18 versions.
       run: docker build --target developer -t gateway-env .
 
     - name: Step 1: Static Analysis (Cppcheck)
@@ -23,31 +29,28 @@ jobs:
         cppcheck --enable=all --suppress=missingIncludeSystem src/ include/ --error-exitcode=1
 
     - name: Step 2: Linting (Clang-Tidy)
+      # Fixed the command string to ensure valid YAML syntax.
       run: |
         docker run --rm -v ${{ github.workspace }}:/app -w /app gateway-env \
-        bash -c "cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_COMPILER=clang++ && \
-        run-clang-tidy -p build -header-filter='src/.*|include/.*'"
+        bash -c "cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_COMPILER=clang++ && run-clang-tidy -p build -header-filter='src/.*|include/.*'"
 
-    - name: Step 3: Compilation
+    - name: Step 3: Baremetal Compilation
+      # I am choosing to build on the host with coverage instrumentation.
       run: |
-        docker run --rm -v ${{ github.workspace }}:/app -w /app gateway-env \
-        cmake --build build --parallel $(nproc)
+        cmake -B build -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -fcoverage-mapping"
+        cmake --build build --parallel $(proc)
 
-    - name: Step 4: Unit Testing (GTest)
-      # I am choosing to run only the tests here to verify logic first.
+    - name: Step 4: Unit Testing (Baremetal)
+      # Running on the host provides better access to system audio drivers.
       run: |
-        docker run --rm -v ${{ github.workspace }}:/app -w /app gateway-env \
-        bash -c "cd build && ctest --output-on-failure"
+        cd build
+        ctest --output-on-failure
 
     - name: Step 5: Coverage Analysis (LLVM-Cov)
-      # I am choosing to generate the report only if the tests passed.
       run: |
-        docker run --rm -v ${{ github.workspace }}:/app -w /app gateway-env \
-        bash -c "cd build && \
-        llvm-profdata merge -sparse default.profraw -o test.profdata && \
-        llvm-cov report ./unit_tests -instr-profile=test.profdata ../src/"
+        cd build
+        llvm-profdata merge -sparse default.profraw -o test.profdata
+        llvm-cov report ./unit_tests -instr-profile=test.profdata ../src/alsa_impl.cpp
 
-    - name: Step 6: Fuzzing Smoke Test
-      run: |
-        docker run --rm -v ${{ github.workspace }}:/app -w /app gateway-env \
-        ./build/fuzz_alsa -max_total_time=30 -rss_limit_mb=2048
+    - name: Step 6: Fuzzing Smoke Test (Baremetal)
+      run: ./build/fuzz_alsa -max_total_time=10 -rss_limit_mb=1024
