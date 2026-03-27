@@ -1,4 +1,4 @@
-name: Audio Gateway CI (Baremetal Execution)
+name: Audio Gateway CI (Baremetal First)
 
 on:
   push:
@@ -11,35 +11,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout Code
-      # I am fixing the typo: 'uses/checkout' becomes 'actions/checkout'
       uses: actions/checkout@v4
 
-    - name: Install Host Dependencies
-      # I am choosing to add 'llvm' here so llvm-cov is available on the host.
+    - name: Install System Dependencies
+      # I am installing everything on the host so we don't need 'docker run' for tools.
       run: |
         sudo apt-get update
-        sudo apt-get install -y libasound2-dev libgtest-dev cmake clang clang-tidy cppcheck llvm
-
-    - name: Build Developer Environment (Tooling Only)
-      run: docker build --target developer -t gateway-env .
+        sudo apt-get install -y \
+          libasound2-dev libgtest-dev cmake \
+          clang-18 llvm-18 clang-tidy-18 cppcheck \
+          build-essential
 
     - name: Step 1: Static Analysis (Cppcheck)
       run: |
-        docker run --rm -v ${{ github.workspace }}:/app -w /app gateway-env \
         cppcheck --enable=all --suppress=missingIncludeSystem src/ include/ --error-exitcode=1
 
     - name: Step 2: Linting (Clang-Tidy)
+      # I am running this on the host. It needs a compile_commands.json to work.
       run: |
-        docker run --rm -v ${{ github.workspace }}:/app -w /app gateway-env \
-        bash -c "cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_COMPILER=clang++ && run-clang-tidy -p build -header-filter='src/.*|include/.*'"
+        cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_COMPILER=clang++-18
+        clang-tidy-18 -p build src/*.cpp include/*.hpp --header-filter='.*'
 
-    - name: Step 3: Baremetal Compilation
-      # I am fixing '$(proc)' to '$(nproc)' and ensuring strict YAML indentation.
+    - name: Step 3: Compilation
       run: |
-        cmake -B build -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -fcoverage-mapping"
+        cmake -B build -DCMAKE_CXX_COMPILER=clang++-18 \
+          -DCMAKE_CXX_FLAGS="-fprofile-instr-generate -fcoverage-mapping"
         cmake --build build --parallel $(nproc)
 
-    - name: Step 4: Unit Testing (Baremetal)
+    - name: Step 4: Unit Testing (GTest)
       run: |
         cd build
         ctest --output-on-failure
@@ -47,8 +46,18 @@ jobs:
     - name: Step 5: Coverage Analysis (LLVM-Cov)
       run: |
         cd build
-        llvm-profdata merge -sparse default.profraw -o test.profdata
-        llvm-cov report ./unit_tests -instr-profile=test.profdata ../src/alsa_impl.cpp
+        llvm-profdata-18 merge -sparse default.profraw -o test.profdata
+        llvm-cov-18 report ./unit_tests -instr-profile=test.profdata ../src/alsa_impl.cpp
 
-    - name: Step 6: Fuzzing Smoke Test (Baremetal)
+    - name: Step 6: Fuzzing Smoke Test
       run: ./build/fuzz_alsa -max_total_time=10 -rss_limit_mb=1024
+
+    - name: Step 7: Container Build & Launch Test
+      # I am choosing this as the final gate. If the image fails to build or 
+      # the binary crashes on start, this step fails.
+      run: |
+        docker build -t audio-gateway-prod .
+        # We run it in the background and check if it stays alive for 2 seconds.
+        docker run -d --name test-container audio-gateway-prod
+        sleep 2
+        docker ps | grep test-container
