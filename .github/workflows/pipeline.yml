@@ -14,6 +14,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: "1. Install & Setup System Dependencies"
+      # I am choosing to replicate your Dockerfile setup exactly on the host runner.
       run: |
         sudo apt-get update && sudo apt-get install -y libasound2-dev libgtest-dev libzmq3-dev cppzmq-dev libboost-all-dev pkg-config cmake g++ alsa-utils cppcheck clang-18 clang-tidy-18 llvm-18 libfuzzer-18-dev build-essential
         sudo ln -sf /usr/bin/clang-18 /usr/bin/clang && sudo ln -sf /usr/bin/clang++-18 /usr/bin/clang++ && sudo ln -sf /usr/bin/clang-tidy-18 /usr/bin/clang-tidy && sudo ln -sf /usr/bin/llvm-cov-18 /usr/bin/llvm-cov && sudo ln -sf /usr/bin/llvm-profdata-18 /usr/bin/llvm-profdata
@@ -23,9 +24,10 @@ jobs:
       run: cppcheck --enable=all -I include --suppress=missingIncludeSystem src/ include/ --error-exitcode=1
 
     - name: "3. Linting (Clang-Tidy)"
-      run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_COMPILER=clang++ -DENABLE_COVERAGE=ON -DENABLE_FUZZING=ON && find src include -name "*.cpp" -o -name "*.hpp" | xargs clang-tidy -p build --header-filter='.*'
+      run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_COMPILER=clang++ && find src include -name "*.cpp" -o -name "*.hpp" | xargs clang-tidy -p build --header-filter='.*'
 
     - name: "4. Compilation"
+      # I am choosing to build with coverage/fuzzing flags so the binaries are actually created.
       run: cmake -B build -DCMAKE_CXX_COMPILER=clang++ -DENABLE_COVERAGE=ON -DENABLE_FUZZING=ON && cmake --build build --parallel $(nproc)
 
     - name: "5. Unit Testing (GTest)"
@@ -38,5 +40,12 @@ jobs:
       run: ./build/fuzz_alsa -max_total_time=10 -rss_limit_mb=1024
 
     - name: "8. Container Build & Launch Test"
-      # I am choosing to specify the file path while keeping the context at root.
-      run: docker build -t audio-gateway-prod -f .devcontainer/Dockerfile . && docker run -d --name test-container audio-gateway-prod && sleep 2 && docker ps | grep test-container
+      # I am using 'docker inspect' because your main() exits quickly; we want to know if it exited safely (0).
+      run: |
+        docker build -t audio-gateway-prod -f .devcontainer/Dockerfile .
+        docker run --name test-container audio-gateway-prod
+        EXIT_CODE=$(docker inspect test-container --format='{{.State.ExitCode}}')
+        if [ "$EXIT_CODE" -ne 0 ]; then
+          docker logs test-container
+          exit 1
+        fi
