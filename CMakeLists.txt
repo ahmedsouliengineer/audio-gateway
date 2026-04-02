@@ -7,10 +7,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# I am choosing to force Clang to use the GCC 13 headers. 
-# This is the "Magic Bullet" for std::expected on Ubuntu runners.
+# I am choosing to manually override the concept macro and point to libstdc++ 13.
+# This bypasses the header guards in the GNU standard library when using Clang 18.
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23 --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23 \
+        --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13 \
+        -D__cpp_concepts=202002L")
 endif()
 
 # --- 1. FIND PACKAGES ---
@@ -18,13 +20,14 @@ find_package(ALSA REQUIRED)
 find_package(GTest REQUIRED)
 find_package(PkgConfig REQUIRED)
 
+# Standardize Boost discovery for Ubuntu-based runners
 set(BOOST_LIBRARYDIR "/usr/lib/x86_64-linux-gnu")
 set(Boost_NO_BOOST_CMAKE ON) 
 find_package(Boost REQUIRED COMPONENTS system)
 
 pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
 
-# --- 2. COVERAGE CONFIGURATION ---
+# --- 2. COVERAGE CONFIGURATION (NATIVE LLVM) ---
 option(ENABLE_COVERAGE "Enable code coverage reporting" OFF)
 if(ENABLE_COVERAGE)
     add_compile_options(-fprofile-instr-generate -fcoverage-mapping -fno-inline -g -O0)
@@ -39,7 +42,7 @@ target_include_directories(gateway_lib PUBLIC
     ${Boost_INCLUDE_DIRS}
 )
 
-# I am adding Gateway.cpp here so the build actually finds your implementation.
+# I am adding both implementation files here to ensure the library is complete.
 target_sources(gateway_lib PRIVATE 
     src/alsa_impl.cpp 
 )
