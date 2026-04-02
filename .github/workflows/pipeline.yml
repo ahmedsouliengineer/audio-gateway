@@ -16,7 +16,7 @@ jobs:
     - name: "1. Install & Setup System Dependencies"
       # I am choosing to replicate your Dockerfile setup exactly on the host runner.
       run: |
-        sudo apt-get update && sudo apt-get install -y libasound2-dev libgtest-dev libzmq3-dev cppzmq-dev libboost-all-dev pkg-config cmake g++ alsa-utils cppcheck clang-18 clang-tidy-18 llvm-18 libfuzzer-18-dev build-essential
+        sudo apt-get update && sudo apt-get install -y libasound2-dev libgtest-dev libzmq3-dev cppzmq-dev libboost-all-dev pkg-config cmake g++ alsa-utils cppcheck clang-18 clang-tidy-18 llvm-18 libfuzzer-18-dev libstdc++-13-dev build-essential
         sudo ln -sf /usr/bin/clang-18 /usr/bin/clang && sudo ln -sf /usr/bin/clang++-18 /usr/bin/clang++ && sudo ln -sf /usr/bin/clang-tidy-18 /usr/bin/clang-tidy && sudo ln -sf /usr/bin/llvm-cov-18 /usr/bin/llvm-cov && sudo ln -sf /usr/bin/llvm-profdata-18 /usr/bin/llvm-profdata
         cd /usr/src/googletest && sudo cmake . && sudo cmake --build . && sudo cp lib/*.a /usr/lib
 
