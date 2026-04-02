@@ -42,7 +42,6 @@ target_include_directories(gateway_lib PUBLIC
 # I am adding Gateway.cpp here so the build actually finds your implementation.
 target_sources(gateway_lib PRIVATE 
     src/alsa_impl.cpp 
-    src/Gateway.cpp
 )
 
 target_link_libraries(gateway_lib 
