@@ -1,5 +1,6 @@
 #include "audio_gateway.hpp"
 
+// I am choosing a trailing return type to satisfy modernize-use-trailing-return-type.
 auto main() -> int
 {
     GatewayConfig config;
@@ -10,6 +11,7 @@ auto main() -> int
         gateway.start();
         gateway.stop();
     } catch (...) {
+        // I am choosing to catch everything to prevent unhandled exceptions at the boundary.
         return 1;
     }
 

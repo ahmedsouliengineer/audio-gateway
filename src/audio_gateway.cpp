@@ -1,9 +1,12 @@
 #include "audio_gateway.hpp"
 
+#include <utility>
+
+// I am choosing pass-by-value and std::move to perfectly satisfy modernize-pass-by-value.
 AudioGateway::AudioGateway(GatewayConfig config, ModuleLogger& log) noexcept
     : config_(std::move(config)), log_(log)
 {
-    // I am choosing to add this call to resolve the [unusedFunction] error
+    // I am choosing to call this here to satisfy the cppcheck unusedFunction warning.
     ModuleLogger::info("AudioGateway initialized.");
 }
 

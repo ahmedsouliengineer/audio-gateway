@@ -44,7 +44,7 @@ target_include_directories(gateway_lib PUBLIC
 
 # I am adding both implementation files here to ensure the library is complete.
 target_sources(gateway_lib PRIVATE 
-    src/alsa_impl.cpp 
+    src/audio_gateway.cpp 
 )
 
 target_link_libraries(gateway_lib 

@@ -1,14 +1,13 @@
 #pragma once
 
 #include <atomic>
+#include <cstdint>
 #include <iostream>
 #include <string>
 #include <thread>
 #include <vector>
 
-/**
- * @brief Minimal error set with explicit size.
- */
+// I am choosing to keep this minimal enum to establish the pattern for future errors.
 enum class SystemError : std::uint8_t
 {
     GenericError
@@ -19,13 +18,11 @@ struct GatewayConfig
     std::string device_name{"default"};
 };
 
-/**
- * @brief Static-only logger to satisfy instance-access warnings.
- */
 class ModuleLogger
 {
 public:
-    static void info(const std::string& msg)
+    // I am choosing to use a static method to avoid instance-access linter warnings.
+    static auto info(const std::string& msg) -> void
     {
         std::cout << "[INFO] " << msg << '\n';
     }
@@ -37,7 +34,6 @@ public:
     explicit AudioGateway(GatewayConfig config, ModuleLogger& log) noexcept;
     ~AudioGateway();
 
-    // Deleted copies to satisfy rule-of-three/five
     AudioGateway(const AudioGateway&) = delete;
     auto operator=(const AudioGateway&) -> AudioGateway& = delete;
 
