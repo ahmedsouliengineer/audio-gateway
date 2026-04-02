@@ -47,10 +47,6 @@ struct AudioChunk
 
 using AudioPool = std::vector<AudioChunk*>;
 
-/**
- * @brief Consolidated ModuleLogger
- * I am choosing to keep all logging logic here to avoid redefinition errors.
- */
 class ModuleLogger
 {
 public:
@@ -61,11 +57,6 @@ public:
     static void error(const std::string& msg)
     {
         std::cerr << "[ERROR] " << msg << '\n';
-    }
-    // I am choosing to add 'warn' to satisfy the usage in main.cpp
-    static void warn(const std::string& msg)
-    {
-        std::cout << "[WARN] " << msg << '\n';
     }
 };
 

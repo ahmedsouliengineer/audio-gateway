@@ -21,6 +21,8 @@ constexpr uint32_t k_spk_sample_rate = 24000; // Native for Kokoro TTS
 // Real-Time Scheduling (Higher = More Priority)
 constexpr int k_priority_critical = 85; // For Mic/Speaker threads
 constexpr int k_priority_high = 80;     // For ZMQ Network threads
+
+constexpr int k_thread_nap_ms = 10; // I am adding this to fix the 'no_member' diagnostic
 } // namespace Schema
 
 /**
