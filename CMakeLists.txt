@@ -1,12 +1,17 @@
 cmake_minimum_required(VERSION 3.24)
 project(AudioGateway VERSION 0.1.0 LANGUAGES CXX)
 
+# --- 0. TOOLCHAIN HARDENING ---
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-# Add this to ensure Clang-Tidy sees the right flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23")
 set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
+# I am choosing to force Clang to use the GCC 13 headers. 
+# This is the "Magic Bullet" for std::expected on Ubuntu runners.
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++23 --gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13")
+endif()
 
 # --- 1. FIND PACKAGES ---
 find_package(ALSA REQUIRED)
@@ -19,12 +24,9 @@ find_package(Boost REQUIRED COMPONENTS system)
 
 pkg_check_modules(ZMQ REQUIRED IMPORTED_TARGET libzmq)
 
-# --- 2. COVERAGE CONFIGURATION (NATIVE LLVM) ---
+# --- 2. COVERAGE CONFIGURATION ---
 option(ENABLE_COVERAGE "Enable code coverage reporting" OFF)
-
 if(ENABLE_COVERAGE)
-    # I am choosing the native Clang 18 instrumentation flags.
-    # These are more precise for C++23 than the old GCC-style --coverage.
     add_compile_options(-fprofile-instr-generate -fcoverage-mapping -fno-inline -g -O0)
     add_link_options(-fprofile-instr-generate -fcoverage-mapping)
 endif()
@@ -37,15 +39,17 @@ target_include_directories(gateway_lib PUBLIC
     ${Boost_INCLUDE_DIRS}
 )
 
+# I am adding Gateway.cpp here so the build actually finds your implementation.
+target_sources(gateway_lib PRIVATE 
+    src/alsa_impl.cpp 
+    src/Gateway.cpp
+)
+
 target_link_libraries(gateway_lib 
     PRIVATE 
         ALSA::ALSA 
         PkgConfig::ZMQ
         ${Boost_LIBRARIES}
-)
-
-target_sources(gateway_lib PRIVATE 
-    src/alsa_impl.cpp 
 )
 
 # --- 4. EXECUTABLE TARGET ---
