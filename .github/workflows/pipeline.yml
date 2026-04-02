@@ -24,11 +24,23 @@ jobs:
       run: cppcheck --enable=all -I include --suppress=missingIncludeSystem --suppress=unmatchedSuppression src/ include/ --error-exitcode=1
 
     - name: "3. Linting (Clang-Tidy)"
-      run: cmake -B build -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_CXX_COMPILER=clang++ && find src include -name "*.cpp" -o -name "*.hpp" | xargs clang-tidy -p build --header-filter='.*'
+      # I am choosing to force the GCC 13 path so Clang-Tidy finds the C++23 <expected> header.
+      run: |
+        cmake -B build \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+          -DCMAKE_CXX_COMPILER=clang++ \
+          -DCMAKE_CXX_FLAGS="--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13"
+        find src include -name "*.cpp" -o -name "*.hpp" | xargs clang-tidy -p build --header-filter='.*'
 
     - name: "4. Compilation"
-      # I am choosing to build with coverage/fuzzing flags so the binaries are actually created.
-      run: cmake -B build -DCMAKE_CXX_COMPILER=clang++ -DENABLE_COVERAGE=ON -DENABLE_FUZZING=ON && cmake --build build --parallel $(nproc)
+      # I am choosing to maintain the same GCC path here to ensure consistent compilation.
+      run: |
+        cmake -B build \
+          -DCMAKE_CXX_COMPILER=clang++ \
+          -DENABLE_COVERAGE=ON \
+          -DENABLE_FUZZING=ON \
+          -DCMAKE_CXX_FLAGS="--gcc-install-dir=/usr/lib/gcc/x86_64-linux-gnu/13"
+        cmake --build build --parallel $(nproc)
 
     - name: "5. Unit Testing (GTest)"
       run: cd build && ctest --output-on-failure
