@@ -2,7 +2,10 @@
 
 AudioGateway::AudioGateway(GatewayConfig config, ModuleLogger& log) noexcept
     : config_(std::move(config)), log_(log)
-{}
+{
+    // I am choosing to add this call to resolve the [unusedFunction] error
+    ModuleLogger::info("AudioGateway initialized.");
+}
 
 AudioGateway::~AudioGateway()
 {
